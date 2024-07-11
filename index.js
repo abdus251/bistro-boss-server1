@@ -109,11 +109,22 @@ async function run() {
       res.send(result);
     });
 
+    
+    
+    
+    
+    
     // Menu related APIs
     app.get('/menu', async (req, res) => {
       const result = await menuCollection.find().toArray();
       res.send(result);
     });
+
+    app.post('/menu',verifyJWT, verifyAdmin, async (req, res) => {
+      const nweItem = req.body;
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    })
 
     app.get('/reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
