@@ -52,7 +52,7 @@ async function run() {
       if (!user || !user.email) {
         return res.status(400).send('Invalid user data');
       }
-      const token = jwt.sign({ email: user.email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '72h' });
+      const token = jwt.sign({ email: user.email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '7d' });
       res.send({ token });
     });
 
