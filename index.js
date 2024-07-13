@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 // Middleware
@@ -29,7 +30,6 @@ const verifyJWT = (req, res, next) => {
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.u8om2pp.mongodb.net/?retryWrites=true&w=majority`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -83,8 +83,6 @@ async function run() {
       res.send(result);
     });
 
-    // Security layer: verifyJWT
-    // Check admin
     app.get('/users/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
 
@@ -109,29 +107,24 @@ async function run() {
       res.send(result);
     });
 
-    
-    
-    
-    
-    
     // Menu related APIs
     app.get('/menu', async (req, res) => {
       const result = await menuCollection.find().toArray();
       res.send(result);
     });
 
-    app.post('/menu',verifyJWT, verifyAdmin, async (req, res) => {
-      const nweItem = req.body;
-      const result = await reviewCollection.find().toArray();
+    app.post('/menu', verifyJWT, verifyAdmin, async (req, res) => {
+      const newItem = req.body;
+      const result = await menuCollection.insertOne(newItem);
       res.send(result);
-    })
+    });
 
-    app.delete('/menu/:id', verifyJWT, verifyAdmin, async(req, res) => {
+    app.delete('/menu/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await menuCollection.deleteOne(query);
       res.send(result);
-    })
+    });
 
     app.get('/reviews', async (req, res) => {
       const result = await reviewCollection.find().toArray();
@@ -166,6 +159,26 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
       res.send(result);
+    });
+
+    // Create payment intent
+    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+
+      try {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: 'usd',
+          payment_method_types: ['card'],
+        });
+
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch (error) {
+        res.status(500).send({ error: 'Failed to create payment intent' });
+      }
     });
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
